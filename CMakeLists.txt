@@ -25,20 +25,22 @@ add_executable(ros2_latency_rtt
   src/latency_stats.cpp
 )
 ament_target_dependencies(ros2_latency_rtt rclcpp builtin_interfaces rmw)
-rosidl_target_interfaces(ros2_latency_rtt ${PROJECT_NAME} "rosidl_typesupport_cpp")
+# Link rosidl C++ typesupport (rosidl_target_interfaces is deprecated in Jazzy)
+rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
+target_link_libraries(ros2_latency_rtt "${cpp_typesupport_target}")
 
 add_executable(rtt_pinger
   src/latency_rtt_pinger.cpp
   src/latency_stats.cpp
 )
 ament_target_dependencies(rtt_pinger rclcpp builtin_interfaces rmw)
-rosidl_target_interfaces(rtt_pinger ${PROJECT_NAME} "rosidl_typesupport_cpp")
+target_link_libraries(rtt_pinger "${cpp_typesupport_target}")
 
 add_executable(rtt_ponger
   src/latency_rtt_ponger.cpp
 )
 ament_target_dependencies(rtt_ponger rclcpp builtin_interfaces rmw)
-rosidl_target_interfaces(rtt_ponger ${PROJECT_NAME} "rosidl_typesupport_cpp")
+target_link_libraries(rtt_ponger "${cpp_typesupport_target}")
 
 install(TARGETS
   ros2_latency_rtt

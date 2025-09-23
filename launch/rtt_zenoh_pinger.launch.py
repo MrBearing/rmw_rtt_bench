@@ -32,23 +32,23 @@ def generate_launch_description():
     router_listen = LaunchConfiguration('router_listen', default='')
     router_mode = LaunchConfiguration('router_mode', default='')
 
-    def make_router(context):
-        args = []
-        listen = context.perform_substitution(router_listen)
-        mode = context.perform_substitution(router_mode)
-        if listen:
-            args += ['--listen', listen]
-        if mode:
-            args += ['--mode', mode]
-        return [Node(
-            package='rmw_zenoh_cpp',
-            executable='rmw_zenohd',
-            name='rmw_zenohd',
-            output='screen',
-            condition=IfCondition(start_router),
-            arguments=args,
-        )]
-    router = OpaqueFunction(function=make_router)
+    # def make_router(context):
+    #     args = []
+    #     listen = context.perform_substitution(router_listen)
+    #     mode = context.perform_substitution(router_mode)
+    #     if listen:
+    #         args += ['--listen', listen]
+    #     if mode:
+    #         args += ['--mode', mode]
+    #     return [Node(
+    #         package='rmw_zenoh_cpp',
+    #         executable='rmw_zenohd',
+    #         name='rmw_zenohd',
+    #         output='screen',
+    #         condition=IfCondition(start_router),
+    #         arguments=args,
+    #     )]
+    # router = OpaqueFunction(function=make_router)
 
     pinger = Node(
         package='rmw_rtt_bench',
@@ -98,6 +98,6 @@ def generate_launch_description():
         DeclareLaunchArgument('router_listen', default_value=router_listen),
         DeclareLaunchArgument('router_mode', default_value=router_mode),
 
-        router,
+        # router,
         pinger,
     ])
