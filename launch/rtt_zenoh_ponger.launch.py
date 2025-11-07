@@ -65,7 +65,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         # Force zenoh RMW and domain id
-        SetEnvironmentVariable('RMW_IMPLEMENTATION', 'rmw_zenoh_cpp'),
+        # SetEnvironmentVariable('RMW_IMPLEMENTATION', 'rmw_zenoh_cpp'),
         SetEnvironmentVariable('ROS_DOMAIN_ID', domain_id),
 
         # Launch args

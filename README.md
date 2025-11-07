@@ -14,8 +14,6 @@ colcon build --packages-select rmw_rtt_bench --symlink-install
 source install/setup.bash
 ```
 
-【一方向モードは本パッケージから削除しました。RTTモードをご利用ください。】
-
 ## RTT Ping–Pong モード
 
 実行ファイル: `rtt_pinger` / `rtt_ponger`
@@ -27,6 +25,15 @@ source install/setup.bash
   ros2 run rmw_rtt_bench rtt_pinger -- \
     --hz 100 --payload-size 1024 --duration 60 --csv results/rtt.csv \
     --qos-reliability reliable --qos-history keep_last --qos-depth 10 --append-summary true
+  ```
+  - ペイロードスイープ（スクリプトでサイズを段階的に増加）
+  ```bash
+  # 別PCでpongerを先に起動（例）
+  ros2 run rmw_rtt_bench rtt_ponger -- --duration 120
+
+  # ワンライナー: 256B→4096Bを512B刻み、各サイズ10秒計測、結果をまとめて出力
+  python3 src/rmw_rtt_bench/scripts/run_payload_sweep.py \
+    256:4096:512 --per-size-duration 10 --hz 100 --out results/rtt_sweep.csv
   ```
 - zenoh + Launch（同時起動、ルータ自動起動可）
   ```bash
