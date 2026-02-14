@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Build artifacts
+build/
+install/
+log/
+.colcon/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Results
+results/
+
+# Temporary files
+*.tmp
+*.bak
