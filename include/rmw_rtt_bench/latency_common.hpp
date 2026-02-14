@@ -110,6 +110,4 @@ inline std::string csv_escape(const std::string & s) {
   return result;
 }
 
-// ParsedArgs と一方向引数パーサはRTT専用化に伴い削除しました。
-
 } // namespace rmw_rtt_bench
