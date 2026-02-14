@@ -2,6 +2,7 @@
 import argparse
 import csv
 import math
+import sys
 from statistics import mean, pstdev
 
 
@@ -31,9 +32,9 @@ def load_column(path, column):
             try:
                 v = int(row[column])
                 values.append(v)
-            except Exception:
-                # skip malformed rows
-                pass
+            except (ValueError, KeyError) as e:
+                # skip malformed rows, but log for debugging
+                print(f"Warning: Skipping malformed row: {e}", file=sys.stderr)
     return values
 
 

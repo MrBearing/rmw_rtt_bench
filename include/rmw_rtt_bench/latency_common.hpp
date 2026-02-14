@@ -4,13 +4,11 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
-#include <cstring>
 #include <cctype>
 #include <unistd.h>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
@@ -95,6 +93,21 @@ inline std::string get_rmw_implementation() {
   return std::string("unknown");
 }
 
-// ParsedArgs と一方向引数パーサはRTT専用化に伴い削除しました。
+inline std::string csv_escape(const std::string & s) {
+  // Escape CSV fields that contain comma, quote, or newline
+  if (s.find(',') == std::string::npos &&
+      s.find('"') == std::string::npos &&
+      s.find('\n') == std::string::npos &&
+      s.find('\r') == std::string::npos) {
+    return s;
+  }
+  std::string result = "\"";
+  for (char c : s) {
+    if (c == '"') result += "\"\"";  // Escape quotes by doubling
+    else result += c;
+  }
+  result += "\"";
+  return result;
+}
 
 } // namespace rmw_rtt_bench

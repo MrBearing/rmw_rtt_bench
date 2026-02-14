@@ -46,6 +46,14 @@ source install/setup.bash
 
 RTT CSVヘッダ: `seq,t0_ns,t1_ns,t2_ns,t3_ns,rtt_ns,proc_ns,oneway_est_ns,payload_size,rmw,qos_rel,qos_hist,qos_depth,transport_tag,host,notes`
 
+## Security
+
+- **Payload size limit**: Maximum 10MB (10,485,760 bytes) to prevent DoS attacks
+- **Input validation**: All command-line parameters are validated
+- **CSV escaping**: Special characters in `transport_tag` and `notes` are properly escaped
+
+詳細は [SECURITY.md](SECURITY.md) を参照。
+
 ## Notes
 - RMW切替: `RMW_IMPLEMENTATION=rmw_fastrtps_cpp|rmw_cyclonedds_cpp|rmw_zenoh_cpp` など。
 - 遠隔の一方向計測はNTP/PTP等での高精度同期が必須。同期不要な計測はRTTモードを使用。
