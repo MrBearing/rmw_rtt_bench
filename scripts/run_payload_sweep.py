@@ -56,7 +56,11 @@ def run_pinger_once(size: int, out_csv: Path, args):
         if args.append_summary:
             cmd += ["--append-summary", "true"]
     print(f"[run] payload={size} bytes -> {out_csv}")
-    timeout_val = args.per_size_duration + 10 if args.per_size_timeout <= 0 else args.per_size_timeout + 5
+    # Add timeout buffer: 10s for default, 5s for custom timeout
+    # This ensures the subprocess doesn't hang indefinitely
+    TIMEOUT_BUFFER_DEFAULT = 10
+    TIMEOUT_BUFFER_CUSTOM = 5
+    timeout_val = args.per_size_duration + TIMEOUT_BUFFER_DEFAULT if args.per_size_timeout <= 0 else args.per_size_timeout + TIMEOUT_BUFFER_CUSTOM
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_val)
         if proc.returncode != 0:
