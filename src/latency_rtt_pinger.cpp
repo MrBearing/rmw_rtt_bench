@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <utility>
@@ -49,9 +50,9 @@ static bool parse_pinger_args(std::vector<std::string> args, PingerArgs & out, s
     else if (a == "--rep-topic") { auto v = get_value(i); if (!v) { error = "--rep-topic requires value"; return false; } out.rep_topic = *v; }
     else if (a == "--qos-reliability") { auto v = get_value(i); if (!v) { error = "--qos-reliability requires value"; return false; } out.qos.reliability = *v; }
     else if (a == "--qos-history") { auto v = get_value(i); if (!v) { error = "--qos-history requires value"; return false; } out.qos.history = *v; }
-    else if (a == "--qos-depth") { auto v = get_value(i); if (!v) { error = "--qos-depth requires value"; return false; } try { out.qos.depth = std::stoi(*v); } catch (...) { error = "--qos-depth expects integer"; return false; } }
-    else if (a == "--hz") { auto v = get_value(i); if (!v) { error = "--hz requires value"; return false; } try { out.hz = std::stod(*v); } catch (...) { error = "--hz expects number"; return false; } }
-    else if (a == "--payload-size") { auto v = get_value(i); if (!v) { error = "--payload-size requires value"; return false; } try { out.payload_size = std::stoi(*v); } catch (...) { error = "--payload-size expects integer"; return false; } }
+    else if (a == "--qos-depth") { auto v = get_value(i); if (!v) { error = "--qos-depth requires value"; return false; } try { out.qos.depth = std::stoi(*v); if (out.qos.depth < 1) { error = "--qos-depth must be >= 1"; return false; } } catch (...) { error = "--qos-depth expects positive integer"; return false; } }
+    else if (a == "--hz") { auto v = get_value(i); if (!v) { error = "--hz requires value"; return false; } try { out.hz = std::stod(*v); if (out.hz <= 0.0) { error = "--hz must be > 0"; return false; } } catch (...) { error = "--hz expects positive number"; return false; } }
+    else if (a == "--payload-size") { auto v = get_value(i); if (!v) { error = "--payload-size requires value"; return false; } try { out.payload_size = std::stoi(*v); if (out.payload_size < 0) { error = "--payload-size must be >= 0"; return false; } } catch (...) { error = "--payload-size expects non-negative integer"; return false; } }
     else if (a == "--duration") { auto v = get_value(i); if (!v) { error = "--duration requires value"; return false; } try { out.duration_sec = std::stoi(*v); } catch (...) { error = "--duration expects integer seconds"; return false; } }
     else if (a == "--trials") { auto v = get_value(i); if (!v) { error = "--trials requires value"; return false; } try { out.trials = std::stoll(*v); } catch (...) { error = "--trials expects integer"; return false; } }
     else if (a == "--timeout") { auto v = get_value(i); if (!v) { error = "--timeout requires value"; return false; } try { out.timeout_sec = std::stoi(*v); } catch (...) { error = "--timeout expects integer seconds"; return false; } }
@@ -62,7 +63,6 @@ static bool parse_pinger_args(std::vector<std::string> args, PingerArgs & out, s
     else if (a == "--summary") { auto v = get_value(i); if (!v) { error = "--summary requires value"; return false; } auto b = rlb::parse_bool(*v); if (!b) { error = "--summary expects true|false"; return false; } out.summary_log = *b; }
     else if (a == "--append-summary") { auto v = get_value(i); if (!v) { error = "--append-summary requires value"; return false; } auto b = rlb::parse_bool(*v); if (!b) { error = "--append-summary expects true|false"; return false; } out.append_summary = *b; }
   }
-  if (out.hz <= 0.0) { error = "--hz must be > 0"; return false; }
   if (out.trials == 0) { error = "--trials must be > 0 when provided"; return false; }
   if (out.duration_sec <= 0) { error = "--duration must be > 0"; return false; }
   if (out.timeout_sec == 0) { error = "--timeout must be > 0 when provided"; return false; }
@@ -137,6 +137,17 @@ private:
     int64_t t3ns = t3.nanoseconds();
     int64_t rtt = t3ns - t0;
     int64_t proc = (t2 - t1);
+    
+    // Validate RTT - reject negative or unreasonable values
+    if (rtt < 0) {
+      RCLCPP_WARN(get_logger(), "Negative RTT detected (%lld ns), skipping sample", rtt);
+      return;
+    }
+    if (proc < 0) {
+      RCLCPP_WARN(get_logger(), "Negative processing time detected (%lld ns), skipping sample", proc);
+      return;
+    }
+    
     int64_t oneway_est = (rtt >= proc) ? (rtt - proc) / 2 : -1;
 
     csv_ << rep->seq << ','
@@ -164,13 +175,14 @@ private:
   }
 
   void finish_and_exit(bool timecap) {
+    std::lock_guard<std::mutex> lock(finish_mutex_);
     if (finished_) return;
     finished_ = true;
     if (timecap) {
       RCLCPP_INFO(this->get_logger(), "Time cap reached. Stopping pinger.");
     }
     csv_.flush();
-    if (cfg_.summary_log) {
+    if (cfg_.summary_log && !latencies_ns_.empty()) {
       LatencyStatsC s_rtt = compute_latency_stats(latencies_ns_.data(), latencies_ns_.size(), 0, 0);
       RCLCPP_INFO(this->get_logger(), "[RTT] count=%zu mean=%.6f ms median=%.6f ms p95=%.6f ms p99=%.6f ms max=%.6f ms stddev=%.6f ms",
                   s_rtt.count, s_rtt.mean_ms, s_rtt.median_ms, s_rtt.p95_ms, s_rtt.p99_ms, s_rtt.max_ms, s_rtt.stddev_ms);
@@ -204,6 +216,7 @@ private:
   std::vector<int64_t> latencies_ns_;
   std::vector<int64_t> oneways_ns_;
   bool finished_{false};
+  std::mutex finish_mutex_;
 };
 
 int main(int argc, char ** argv) {

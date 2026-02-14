@@ -6,6 +6,11 @@ from statistics import mean, pstdev
 
 
 def percentile(sorted_values, p):
+    """
+    Calculate percentile from sorted values.
+    Handles edge cases: empty list returns NaN, single value returns that value.
+    Uses linear interpolation between indices for fractional positions.
+    """
     if not sorted_values:
         return math.nan
     if len(sorted_values) == 1:

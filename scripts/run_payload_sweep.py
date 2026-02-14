@@ -56,9 +56,15 @@ def run_pinger_once(size: int, out_csv: Path, args):
         if args.append_summary:
             cmd += ["--append-summary", "true"]
     print(f"[run] payload={size} bytes -> {out_csv}")
-    proc = subprocess.run(cmd)
-    if proc.returncode != 0:
-        raise RuntimeError(f"pinger exited with code {proc.returncode}")
+    timeout_val = args.per_size_duration + 10 if args.per_size_timeout <= 0 else args.per_size_timeout + 5
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_val)
+        if proc.returncode != 0:
+            print(f"Error running pinger: {proc.stderr}", file=sys.stderr)
+            raise RuntimeError(f"pinger exited with code {proc.returncode}")
+    except subprocess.TimeoutExpired:
+        print(f"Pinger timed out after {timeout_val} seconds", file=sys.stderr)
+        raise RuntimeError(f"pinger timeout after {timeout_val}s")
 
 
 def merge_csvs(csv_paths, merged_path: Path):
