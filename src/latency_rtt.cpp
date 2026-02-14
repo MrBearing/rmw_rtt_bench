@@ -47,9 +47,28 @@ static bool parse_rtt_args(std::vector<std::string> args, RttArgs & out, std::st
     } else if (a == "--rep-topic") { auto v = get_value(i); if (!v) { error = "--rep-topic requires value"; return false; } out.rep_topic = *v;
     } else if (a == "--qos-reliability") { auto v = get_value(i); if (!v) { error = "--qos-reliability requires value"; return false; } out.qos.reliability = *v;
     } else if (a == "--qos-history") { auto v = get_value(i); if (!v) { error = "--qos-history requires value"; return false; } out.qos.history = *v;
-    } else if (a == "--qos-depth") { auto v = get_value(i); if (!v) { error = "--qos-depth requires value"; return false; } try { out.qos.depth = std::stoi(*v); if (out.qos.depth < 1) { error = "--qos-depth must be >= 1"; return false; } } catch (...) { error = "--qos-depth expects positive integer"; return false; }
-    } else if (a == "--hz") { auto v = get_value(i); if (!v) { error = "--hz requires value"; return false; } try { out.hz = std::stod(*v); if (out.hz <= 0.0) { error = "--hz must be > 0"; return false; } } catch (...) { error = "--hz expects positive number"; return false; }
-    } else if (a == "--payload-size") { auto v = get_value(i); if (!v) { error = "--payload-size requires value"; return false; } try { out.payload_size = std::stoi(*v); if (out.payload_size < 0) { error = "--payload-size must be >= 0"; return false; } } catch (...) { error = "--payload-size expects non-negative integer"; return false; }
+    } else if (a == "--qos-depth") {
+      auto v = get_value(i);
+      if (!v) { error = "--qos-depth requires value"; return false; }
+      try {
+        out.qos.depth = std::stoi(*v);
+        if (out.qos.depth < 1) { error = "--qos-depth must be >= 1"; return false; }
+      } catch (...) { error = "--qos-depth expects positive integer"; return false; }
+    } else if (a == "--hz") {
+      auto v = get_value(i);
+      if (!v) { error = "--hz requires value"; return false; }
+      try {
+        out.hz = std::stod(*v);
+        if (out.hz <= 0.0) { error = "--hz must be > 0"; return false; }
+      } catch (...) { error = "--hz expects positive number"; return false; }
+    } else if (a == "--payload-size") {
+      auto v = get_value(i);
+      if (!v) { error = "--payload-size requires value"; return false; }
+      try {
+        out.payload_size = std::stoi(*v);
+        if (out.payload_size < 0) { error = "--payload-size must be >= 0"; return false; }
+      } catch (...) { error = "--payload-size expects non-negative integer"; return false; }
+    }
     } else if (a == "--duration") { auto v = get_value(i); if (!v) { error = "--duration requires value"; return false; } try { out.duration_sec = std::stoi(*v); } catch (...) { error = "--duration expects integer seconds"; return false; }
     } else if (a == "--trials") { auto v = get_value(i); if (!v) { error = "--trials requires value"; return false; } try { out.trials = std::stoll(*v); } catch (...) { error = "--trials expects integer"; return false; }
     } else if (a == "--timeout") { auto v = get_value(i); if (!v) { error = "--timeout requires value"; return false; } try { out.timeout_sec = std::stoi(*v); } catch (...) { error = "--timeout expects integer seconds"; return false; }
