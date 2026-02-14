@@ -31,9 +31,10 @@ def load_column(path, column):
             try:
                 v = int(row[column])
                 values.append(v)
-            except Exception:
-                # skip malformed rows
-                pass
+            except (ValueError, KeyError) as e:
+                # skip malformed rows, but log for debugging
+                import sys
+                print(f"Warning: Skipping malformed row: {e}", file=sys.stderr)
     return values
 
 

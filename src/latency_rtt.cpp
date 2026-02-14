@@ -47,12 +47,12 @@ static bool parse_rtt_args(std::vector<std::string> args, RttArgs & out, std::st
     } else if (a == "--rep-topic") { auto v = get_value(i); if (!v) { error = "--rep-topic requires value"; return false; } out.rep_topic = *v;
     } else if (a == "--qos-reliability") { auto v = get_value(i); if (!v) { error = "--qos-reliability requires value"; return false; } out.qos.reliability = *v;
     } else if (a == "--qos-history") { auto v = get_value(i); if (!v) { error = "--qos-history requires value"; return false; } out.qos.history = *v;
-    } else if (a == "--qos-depth") { auto v = get_value(i); if (!v) { error = "--qos-depth requires value"; return false; } try { out.qos.depth = std::stoi(*v); } catch (...) { error = "--qos-depth expects integer"; return false; }
-    } else if (a == "--hz") { auto v = get_value(i); if (!v) { error = "--hz requires value"; return false; } try { out.hz = std::stod(*v); } catch (...) { error = "--hz expects number"; return false; }
-    } else if (a == "--payload-size") { auto v = get_value(i); if (!v) { error = "--payload-size requires value"; return false; } try { out.payload_size = std::stoi(*v); } catch (...) { error = "--payload-size expects integer"; return false; }
-    } else if (a == "--duration") { auto v = get_value(i); if (!v) { error = "--duration requires value"; return false; } try { out.duration_sec = std::stoi(*v); } catch (...) { error = "--duration expects integer seconds"; return false; }
-    } else if (a == "--trials") { auto v = get_value(i); if (!v) { error = "--trials requires value"; return false; } try { out.trials = std::stoll(*v); } catch (...) { error = "--trials expects integer"; return false; }
-    } else if (a == "--timeout") { auto v = get_value(i); if (!v) { error = "--timeout requires value"; return false; } try { out.timeout_sec = std::stoi(*v); } catch (...) { error = "--timeout expects integer seconds"; return false; }
+    } else if (a == "--qos-depth") { auto v = get_value(i); if (!v) { error = "--qos-depth requires value"; return false; } try { out.qos.depth = std::stoi(*v); } catch (const std::exception &) { error = "--qos-depth expects integer"; return false; }
+    } else if (a == "--hz") { auto v = get_value(i); if (!v) { error = "--hz requires value"; return false; } try { out.hz = std::stod(*v); } catch (const std::exception &) { error = "--hz expects number"; return false; }
+    } else if (a == "--payload-size") { auto v = get_value(i); if (!v) { error = "--payload-size requires value"; return false; } try { out.payload_size = std::stoi(*v); } catch (const std::exception &) { error = "--payload-size expects integer"; return false; }
+    } else if (a == "--duration") { auto v = get_value(i); if (!v) { error = "--duration requires value"; return false; } try { out.duration_sec = std::stoi(*v); } catch (const std::exception &) { error = "--duration expects integer seconds"; return false; }
+    } else if (a == "--trials") { auto v = get_value(i); if (!v) { error = "--trials requires value"; return false; } try { out.trials = std::stoll(*v); } catch (const std::exception &) { error = "--trials expects integer"; return false; }
+    } else if (a == "--timeout") { auto v = get_value(i); if (!v) { error = "--timeout requires value"; return false; } try { out.timeout_sec = std::stoi(*v); } catch (const std::exception &) { error = "--timeout expects integer seconds"; return false; }
     } else if (a == "--intra-process") { auto v = get_value(i); if (!v) { error = "--intra-process requires value"; return false; } auto b = rlb::parse_bool(*v); if (!b) { error = "--intra-process expects true|false"; return false; } out.intra_process = *b;
     } else if (a == "--csv") { auto v = get_value(i); if (!v) { error = "--csv requires value"; return false; } out.csv_path = *v;
     } else if (a == "--transport-tag") { auto v = get_value(i); if (!v) { error = "--transport-tag requires value"; return false; } out.transport_tag = *v;
@@ -64,6 +64,8 @@ static bool parse_rtt_args(std::vector<std::string> args, RttArgs & out, std::st
   if (out.trials == 0) { error = "--trials must be > 0 when provided"; return false; }
   if (out.duration_sec <= 0) { error = "--duration must be > 0"; return false; }
   if (out.timeout_sec == 0) { error = "--timeout must be > 0 when provided"; return false; }
+  if (out.payload_size < 0) { error = "--payload-size must be >= 0"; return false; }
+  if (out.payload_size > 10485760) { error = "--payload-size must be <= 10MB (10485760 bytes)"; return false; }
   rclcpp::QoS dummy(10); std::string err; if (!rlb::build_qos(out.qos, dummy, err)) { error = err; return false; }
   return true;
 }
@@ -163,9 +165,9 @@ private:
          << cfg_.qos.reliability << ','
          << cfg_.qos.history << ','
          << cfg_.qos.depth << ','
-         << cfg_.transport_tag << ','
+         << rlb::csv_escape(cfg_.transport_tag) << ','
          << rlb::get_hostname() << ','
-         << cfg_.notes << '\n';
+         << rlb::csv_escape(cfg_.notes) << '\n';
 
     latencies_ns_.push_back(rtt);
     if (++lines_since_flush_ % 1000 == 0) csv_.flush();
@@ -190,6 +192,13 @@ private:
 
   void on_request(const Rtt::SharedPtr req) {
     auto t1 = this->get_clock()->now();
+    // Validate payload size from network to prevent DoS attacks
+    constexpr uint32_t MAX_PAYLOAD_SIZE = 10485760; // 10MB
+    if (req->payload_size_bytes > MAX_PAYLOAD_SIZE) {
+      RCLCPP_WARN(get_logger(), "Rejecting request with excessive payload size: %u bytes (max: %u)",
+                  req->payload_size_bytes, MAX_PAYLOAD_SIZE);
+      return;
+    }
     Rtt rep;
     rep.seq = req->seq;
     rep.t0_pub_send = req->t0_pub_send;

@@ -30,8 +30,8 @@ static bool parse_ponger_args(std::vector<std::string> args, PongerArgs & out, s
     else if (a == "--rep-topic") { auto v = get_value(i); if (!v) { error = "--rep-topic requires value"; return false; } out.rep_topic = *v; }
     else if (a == "--qos-reliability") { auto v = get_value(i); if (!v) { error = "--qos-reliability requires value"; return false; } out.qos.reliability = *v; }
     else if (a == "--qos-history") { auto v = get_value(i); if (!v) { error = "--qos-history requires value"; return false; } out.qos.history = *v; }
-    else if (a == "--qos-depth") { auto v = get_value(i); if (!v) { error = "--qos-depth requires value"; return false; } try { out.qos.depth = std::stoi(*v); } catch (...) { error = "--qos-depth expects integer"; return false; } }
-    else if (a == "--duration") { auto v = get_value(i); if (!v) { error = "--duration requires value"; return false; } try { out.duration_sec = std::stoi(*v); } catch (...) { error = "--duration expects integer seconds"; return false; } }
+    else if (a == "--qos-depth") { auto v = get_value(i); if (!v) { error = "--qos-depth requires value"; return false; } try { out.qos.depth = std::stoi(*v); } catch (const std::exception &) { error = "--qos-depth expects integer"; return false; } }
+    else if (a == "--duration") { auto v = get_value(i); if (!v) { error = "--duration requires value"; return false; } try { out.duration_sec = std::stoi(*v); } catch (const std::exception &) { error = "--duration expects integer seconds"; return false; } }
     else if (a == "--intra-process") { auto v = get_value(i); if (!v) { error = "--intra-process requires value"; return false; } auto b = rlb::parse_bool(*v); if (!b) { error = "--intra-process expects true|false"; return false; } out.intra_process = *b; }
     else if (a == "--transport-tag") { auto v = get_value(i); if (!v) { error = "--transport-tag requires value"; return false; } out.transport_tag = *v; }
     else if (a == "--notes") { auto v = get_value(i); if (!v) { error = "--notes requires value"; return false; } out.notes = *v; }
@@ -63,6 +63,13 @@ public:
 private:
   void on_request(const Rtt::SharedPtr req) {
     auto t1 = this->get_clock()->now();
+    // Validate payload size from network to prevent DoS attacks
+    constexpr uint32_t MAX_PAYLOAD_SIZE = 10485760; // 10MB
+    if (req->payload_size_bytes > MAX_PAYLOAD_SIZE) {
+      RCLCPP_WARN(get_logger(), "Rejecting request with excessive payload size: %u bytes (max: %u)",
+                  req->payload_size_bytes, MAX_PAYLOAD_SIZE);
+      return;
+    }
     Rtt rep;
     rep.seq = req->seq;
     rep.t0_pub_send = req->t0_pub_send;
