@@ -32,6 +32,11 @@ def parse_sizes(arg: str):
     return [v]
 
 
+# Timeout buffer constants (in seconds)
+TIMEOUT_BUFFER_DEFAULT = 10  # Buffer for default duration-based timeout
+TIMEOUT_BUFFER_CUSTOM = 5    # Buffer for custom timeout
+
+
 def run_pinger_once(size: int, out_csv: Path, args):
     cmd = [
         "ros2", "run", "rmw_rtt_bench", "rtt_pinger", "--",
@@ -56,9 +61,16 @@ def run_pinger_once(size: int, out_csv: Path, args):
         if args.append_summary:
             cmd += ["--append-summary", "true"]
     print(f"[run] payload={size} bytes -> {out_csv}")
-    proc = subprocess.run(cmd)
-    if proc.returncode != 0:
-        raise RuntimeError(f"pinger exited with code {proc.returncode}")
+    # Add timeout buffer to ensure the subprocess doesn't hang indefinitely
+    timeout_val = args.per_size_duration + TIMEOUT_BUFFER_DEFAULT if args.per_size_timeout <= 0 else args.per_size_timeout + TIMEOUT_BUFFER_CUSTOM
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_val)
+        if proc.returncode != 0:
+            print(f"Error running pinger: {proc.stderr}", file=sys.stderr)
+            raise RuntimeError(f"pinger exited with code {proc.returncode}")
+    except subprocess.TimeoutExpired:
+        print(f"Pinger timed out after {timeout_val} seconds", file=sys.stderr)
+        raise RuntimeError(f"pinger timeout after {timeout_val}s")
 
 
 def merge_csvs(csv_paths, merged_path: Path):

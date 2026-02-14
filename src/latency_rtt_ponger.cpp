@@ -30,7 +30,14 @@ static bool parse_ponger_args(std::vector<std::string> args, PongerArgs & out, s
     else if (a == "--rep-topic") { auto v = get_value(i); if (!v) { error = "--rep-topic requires value"; return false; } out.rep_topic = *v; }
     else if (a == "--qos-reliability") { auto v = get_value(i); if (!v) { error = "--qos-reliability requires value"; return false; } out.qos.reliability = *v; }
     else if (a == "--qos-history") { auto v = get_value(i); if (!v) { error = "--qos-history requires value"; return false; } out.qos.history = *v; }
-    else if (a == "--qos-depth") { auto v = get_value(i); if (!v) { error = "--qos-depth requires value"; return false; } try { out.qos.depth = std::stoi(*v); } catch (...) { error = "--qos-depth expects integer"; return false; } }
+    else if (a == "--qos-depth") {
+      auto v = get_value(i);
+      if (!v) { error = "--qos-depth requires value"; return false; }
+      try {
+        out.qos.depth = std::stoi(*v);
+        if (out.qos.depth < 1) { error = "--qos-depth must be >= 1"; return false; }
+      } catch (...) { error = "--qos-depth expects positive integer"; return false; }
+    }
     else if (a == "--duration") { auto v = get_value(i); if (!v) { error = "--duration requires value"; return false; } try { out.duration_sec = std::stoi(*v); } catch (...) { error = "--duration expects integer seconds"; return false; } }
     else if (a == "--intra-process") { auto v = get_value(i); if (!v) { error = "--intra-process requires value"; return false; } auto b = rlb::parse_bool(*v); if (!b) { error = "--intra-process expects true|false"; return false; } out.intra_process = *b; }
     else if (a == "--transport-tag") { auto v = get_value(i); if (!v) { error = "--transport-tag requires value"; return false; } out.transport_tag = *v; }

@@ -79,9 +79,11 @@ inline bool build_qos(const QoSOptions & opts, rclcpp::QoS & qos_out, std::strin
 
 inline std::string get_hostname() {
   char buf[256];
-  buf[0] = '\0';
+  std::memset(buf, 0, sizeof(buf));
+  // Pass full buffer size - gethostname() won't write more than specified
+  // and we ensure null-termination regardless
   if (gethostname(buf, sizeof(buf)) == 0) {
-    buf[sizeof(buf) - 1] = '\0';
+    buf[sizeof(buf) - 1] = '\0';  // Ensure null termination
     return std::string(buf);
   }
   return std::string("unknown");
