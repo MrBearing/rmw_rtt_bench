@@ -32,6 +32,11 @@ def parse_sizes(arg: str):
     return [v]
 
 
+# Timeout buffer constants (in seconds)
+TIMEOUT_BUFFER_DEFAULT = 10  # Buffer for default duration-based timeout
+TIMEOUT_BUFFER_CUSTOM = 5    # Buffer for custom timeout
+
+
 def run_pinger_once(size: int, out_csv: Path, args):
     cmd = [
         "ros2", "run", "rmw_rtt_bench", "rtt_pinger", "--",
@@ -56,10 +61,7 @@ def run_pinger_once(size: int, out_csv: Path, args):
         if args.append_summary:
             cmd += ["--append-summary", "true"]
     print(f"[run] payload={size} bytes -> {out_csv}")
-    # Add timeout buffer: 10s for default, 5s for custom timeout
-    # This ensures the subprocess doesn't hang indefinitely
-    TIMEOUT_BUFFER_DEFAULT = 10
-    TIMEOUT_BUFFER_CUSTOM = 5
+    # Add timeout buffer to ensure the subprocess doesn't hang indefinitely
     timeout_val = args.per_size_duration + TIMEOUT_BUFFER_DEFAULT if args.per_size_timeout <= 0 else args.per_size_timeout + TIMEOUT_BUFFER_CUSTOM
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_val)
